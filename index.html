@@ -1,0 +1,3455 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Трекер посещаемости</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ===== CSS Variables & Theme ===== */
+    :root {
+      --bg-start: #0f172a;
+      --bg-end: #1e1b4b;
+      --card-bg: rgba(255, 255, 255, 0.06);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-start: #8b5cf6;
+      --accent-end: #06b6d4;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #eab308;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      --radius: 20px;
+      --radius-sm: 12px;
+      --blur: 16px;
+    }
+
+    [data-theme="light"] {
+      --bg-start: #e0e7ff;
+      --bg-end: #f5f3ff;
+      --card-bg: rgba(255, 255, 255, 0.7);
+      --card-border: rgba(148, 163, 184, 0.25);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --shadow: 0 8px 32px rgba(99, 102, 241, 0.12);
+    }
+
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Manrope', system-ui, sans-serif;
+      background: linear-gradient(145deg, var(--bg-start), var(--bg-end));
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100dvh;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* ===== Layout ===== */
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px 100px;
+      min-height: 100dvh;
+    }
+
+    /* ===== Header ===== */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      animation: fadeSlideIn 0.5s ease-out;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      backdrop-filter: blur(var(--blur));
+      color: var(--text-primary);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+
+    .icon-btn:hover {
+      transform: scale(1.08);
+      box-shadow: var(--shadow);
+    }
+
+    .icon-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* ===== Profile ===== */
+    .profile-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 20px;
+      animation: fadeSlideIn 0.5s ease-out;
+      cursor: pointer;
+    }
+
+    .avatar-wrap {
+      position: relative;
+      width: 72px;
+      height: 72px;
+    }
+
+    .avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: white;
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+      transition: transform 0.25s, box-shadow 0.25s;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    .avatar.has-photo {
+      font-size: 0;
+      color: transparent;
+    }
+
+    .avatar.emoji-avatar {
+      font-size: 2rem;
+      font-weight: 400;
+    }
+
+    .profile-block:hover .avatar {
+      transform: scale(1.06);
+      box-shadow: 0 8px 28px rgba(139, 92, 246, 0.55);
+    }
+
+    .avatar-camera {
+      position: absolute;
+      right: -2px;
+      bottom: -2px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+      border: 2px solid var(--bg-start);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      pointer-events: none;
+    }
+
+    .profile-name {
+      margin-top: 10px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .profile-date {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Avatar picker in profile modal */
+    .avatar-preview-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .avatar-preview {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 800;
+      color: white;
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .avatar-preview.has-photo {
+      font-size: 0;
+      color: transparent;
+    }
+
+    .avatar-preview.emoji-avatar {
+      font-size: 2.6rem;
+      font-weight: 400;
+    }
+
+    .avatar-type-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+      margin-bottom: 14px;
+    }
+
+    .avatar-type-btn {
+      padding: 10px 8px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .avatar-type-btn.active {
+      border-color: var(--accent-start);
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    .avatar-type-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .emoji-btn {
+      aspect-ratio: 1;
+      border-radius: var(--radius-sm);
+      border: 2px solid transparent;
+      background: rgba(255, 255, 255, 0.05);
+      font-size: 1.6rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .emoji-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.08);
+    }
+
+    .emoji-btn.active {
+      border-color: var(--accent-start);
+      background: rgba(139, 92, 246, 0.2);
+    }
+
+    .photo-actions {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+    .photo-actions .btn {
+      font-size: 0.9rem;
+      padding: 12px 14px;
+    }
+
+    .avatar-panel {
+      width: 100%;
+    }
+
+    /* ===== Period selector ===== */
+    .period-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      animation: fadeSlideIn 0.5s ease-out 0.05s both;
+    }
+
+    .period-selector {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      backdrop-filter: blur(var(--blur));
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      min-width: 0;
+    }
+
+    .period-selector:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow);
+    }
+
+    .period-selector .period-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .period-selector .period-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .period-selector .period-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .period-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 99px;
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--green);
+      white-space: nowrap;
+    }
+
+    .period-badge.closed {
+      background: rgba(148, 163, 184, 0.2);
+      color: var(--text-secondary);
+    }
+
+    .period-bar .icon-btn {
+      flex-shrink: 0;
+    }
+
+    /* ===== Overall Stats Card ===== */
+    /* ===== Stats Carousel ===== */
+    .carousel-wrap {
+      position: relative;
+      margin-bottom: 24px;
+      animation: fadeSlideIn 0.55s ease-out 0.08s both;
+    }
+
+    .carousel-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(var(--blur));
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .carousel-track {
+      display: flex;
+      transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+      will-change: transform;
+      touch-action: pan-y;
+    }
+
+    .carousel-slide {
+      min-width: 100%;
+      padding: 24px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      box-sizing: border-box;
+      opacity: 0.35;
+      transition: opacity 0.35s ease;
+    }
+
+    .carousel-slide.active {
+      opacity: 1;
+    }
+
+    .slide-title {
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: center;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0 8px;
+    }
+
+    .slide-title.clickable {
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+
+    .slide-title.clickable:hover {
+      color: #a78bfa;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      width: 150px;
+      height: 150px;
+    }
+
+    .chart-wrapper canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .chart-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .chart-center .percent {
+      font-size: 1.85rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .chart-center .label {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      white-space: nowrap;
+    }
+
+    .stats-meta {
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+    }
+
+    .stats-meta .item {
+      flex: 1;
+    }
+
+    .stats-meta .value {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .stats-meta .desc {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    .carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      color: var(--text-primary);
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      transition: opacity 0.2s, transform 0.2s, background 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      line-height: 1;
+      padding: 0;
+    }
+
+    .carousel-btn:hover {
+      transform: translateY(-50%) scale(1.08);
+    }
+
+    .carousel-btn:active {
+      transform: translateY(-50%) scale(0.95);
+    }
+
+    .carousel-btn.prev {
+      left: 6px;
+    }
+
+    .carousel-btn.next {
+      right: 6px;
+    }
+
+    .carousel-btn.hidden {
+      display: none;
+    }
+
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      min-height: 10px;
+    }
+
+    .carousel-dots.hidden {
+      display: none;
+    }
+
+    .carousel-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 99px;
+      background: var(--text-muted);
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      transition: width 0.3s, background 0.3s, opacity 0.3s;
+      opacity: 0.5;
+    }
+
+    .carousel-dot.active {
+      width: 18px;
+      background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+      opacity: 1;
+    }
+
+    /* ===== Subjects Grid ===== */
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text-secondary);
+      animation: fadeSlideIn 0.5s ease-out 0.1s both;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .subjects-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .subject-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(var(--blur));
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+      animation: fadeSlideIn 0.5s ease-out both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .subject-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .subject-card.danger {
+      border-color: rgba(239, 68, 68, 0.5);
+      animation: pulseRed 2s ease-in-out infinite;
+    }
+
+    @keyframes pulseRed {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+      50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    }
+
+    .subject-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .subject-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .ring-container {
+      width: 52px;
+      height: 52px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .ring-container canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .ring-percent {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .subject-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    .progress-track {
+      height: 6px;
+      background: rgba(148, 163, 184, 0.2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.4s;
+    }
+
+    /* ===== Empty State ===== */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      animation: fadeSlideIn 0.5s ease-out;
+    }
+
+    .empty-state .icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+      opacity: 0.7;
+    }
+
+    .empty-state h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* ===== FAB ===== */
+    .fab {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+      color: white;
+      font-size: 1.8rem;
+      font-weight: 300;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(139, 92, 246, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.25s, box-shadow 0.25s;
+      z-index: 50;
+    }
+
+    .fab:hover {
+      transform: scale(1.1) rotate(90deg);
+      box-shadow: 0 12px 32px rgba(139, 92, 246, 0.55);
+    }
+
+    .fab:active {
+      transform: scale(0.95);
+    }
+
+    .fab:disabled {
+      opacity: 0.4;
+      pointer-events: none;
+      transform: none;
+    }
+
+    /* ===== Modal Overlay ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s, visibility 0.3s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #markModal,
+    #confirmModal,
+    #periodEditModal {
+      z-index: 110;
+    }
+
+    .modal {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90dvh;
+      overflow-y: auto;
+      padding: 24px 20px 32px;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0);
+    }
+
+    @media (min-width: 520px) {
+      .modal-overlay {
+        align-items: center;
+      }
+      .modal {
+        border-radius: var(--radius);
+        max-height: 85vh;
+        transform: translateY(30px) scale(0.95);
+        opacity: 0;
+      }
+      .modal-overlay.open .modal {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    .modal-handle {
+      width: 40px;
+      height: 4px;
+      background: var(--text-muted);
+      border-radius: 99px;
+      margin: 0 auto 20px;
+      opacity: 0.5;
+    }
+
+    .modal-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* ===== Form Elements ===== */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    [data-theme="light"] .form-group input,
+    [data-theme="light"] .form-group select {
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--accent-start);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+    }
+
+    .form-group input:disabled,
+    .form-group select:disabled {
+      opacity: 0.5;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 0;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--accent-start);
+      cursor: pointer;
+    }
+
+    .checkbox-row span {
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    /* Status buttons */
+    .status-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .status-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 18px 8px;
+      border-radius: var(--radius-sm);
+      border: 2px solid transparent;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .status-btn .emoji {
+      font-size: 1.8rem;
+    }
+
+    .status-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .status-btn.active[data-status="present"] {
+      border-color: var(--green);
+      background: rgba(34, 197, 94, 0.15);
+    }
+
+    .status-btn.active[data-status="absent"] {
+      border-color: var(--red);
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    .status-btn.active[data-status="excused"] {
+      border-color: var(--yellow);
+      background: rgba(234, 179, 8, 0.15);
+    }
+
+    .status-btn.active[data-status="cancelled"] {
+      border-color: var(--text-muted);
+      background: rgba(148, 163, 184, 0.15);
+    }
+
+    .status-btns.four {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @media (min-width: 400px) {
+      .status-btns.four {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+    }
+
+    .badge-cancelled {
+      background: rgba(148, 163, 184, 0.2);
+      color: var(--text-secondary);
+    }
+
+    /* Schedule editor */
+    .schedule-editor {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .sched-day {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .sched-day-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .sched-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .sched-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .sched-toggle input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-start);
+      cursor: pointer;
+    }
+
+    .sched-count {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0.35;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .sched-count.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .sched-count button {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .sched-count .count-val {
+      min-width: 18px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .schedule-mini {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    /* Today block */
+    .today-block {
+      background: var(--card-bg);
+      backdrop-filter: blur(var(--blur));
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      animation: fadeSlideIn 0.5s ease-out 0.08s both;
+    }
+
+    .today-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .today-header h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    .today-counter {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .today-done {
+      text-align: center;
+      padding: 12px 8px;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .today-item {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px 0;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .today-item:first-of-type {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .today-item-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .today-item .today-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .today-type-badge {
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .today-type-badge.lecture {
+      background: rgba(139, 92, 246, 0.2);
+      color: #a78bfa;
+    }
+
+    .today-type-badge.practice {
+      background: rgba(6, 182, 212, 0.2);
+      color: #22d3ee;
+    }
+
+    .today-pair {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .today-quick {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .today-quick button {
+      padding: 12px 10px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .today-quick button:hover {
+      transform: translateY(-1px);
+    }
+
+    .today-quick button[data-q="present"] {
+      border-color: rgba(34, 197, 94, 0.35);
+      color: var(--green);
+    }
+
+    .today-quick button[data-q="absent"] {
+      border-color: rgba(239, 68, 68, 0.35);
+      color: var(--red);
+    }
+
+    .today-quick button.selected[data-q="present"] {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: var(--green);
+    }
+
+    .today-quick button.selected[data-q="absent"] {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--red);
+    }
+
+    .today-quick button.dimmed {
+      opacity: 0.35;
+    }
+
+    .history-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+
+    .type-badge-sm {
+      padding: 2px 7px;
+      border-radius: 99px;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+
+    .type-badge-sm.lecture {
+      background: rgba(139, 92, 246, 0.2);
+      color: #a78bfa;
+    }
+
+    .type-badge-sm.practice {
+      background: rgba(6, 182, 212, 0.2);
+      color: #22d3ee;
+    }
+
+    .mark-type-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .mark-type-btn {
+      padding: 12px 8px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mark-type-btn.active {
+      border-color: var(--accent-start);
+      background: rgba(139, 92, 246, 0.15);
+      color: var(--text-primary);
+    }
+
+    /* Action buttons */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+      color: white;
+      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.35);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      border: 1px solid var(--card-border);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    /* ===== History List ===== */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 320px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--card-border);
+    }
+
+    .history-item .date {
+      flex: 1;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge-present {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--green);
+    }
+
+    .badge-absent {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--red);
+    }
+
+    .badge-excused {
+      background: rgba(234, 179, 8, 0.2);
+      color: var(--yellow);
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .history-actions button {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .history-actions button:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    /* ===== Detail view ===== */
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .detail-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .detail-stat {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      text-align: center;
+    }
+
+    .detail-stat .val {
+      font-size: 1.4rem;
+      font-weight: 800;
+    }
+
+    .detail-stat .lbl {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* ===== Periods list ===== */
+    .period-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+
+    .period-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .period-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .period-item.active-item {
+      border-color: var(--accent-start);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .period-item .pi-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .period-item .pi-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .period-item .pi-meta {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .period-item .pi-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .period-item .pi-actions button {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .period-item .pi-actions button:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .closed-banner {
+      text-align: center;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      border-radius: var(--radius-sm);
+      background: rgba(148, 163, 184, 0.15);
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      animation: fadeSlideIn 0.4s ease-out;
+    }
+
+    /* ===== Animations ===== */
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ===== Utility ===== */
+    .hidden {
+      display: none !important;
+    }
+
+    .text-green { color: var(--green); }
+    .text-red { color: var(--red); }
+    .text-yellow { color: var(--yellow); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 99px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- Header actions only -->
+    <header class="header">
+      <div></div>
+      <div class="header-actions">
+        <button class="icon-btn" id="themeBtn" title="Сменить тему">🌙</button>
+        <button class="icon-btn" id="exportBtn" title="Экспорт">📤</button>
+        <button class="icon-btn" id="importBtn" title="Импорт">📥</button>
+        <input type="file" id="importInput" accept=".json" class="hidden">
+      </div>
+    </header>
+
+    <!-- Profile -->
+    <div class="profile-block" id="profileBlock">
+      <div class="avatar-wrap">
+        <div class="avatar" id="headerAvatar">С</div>
+        <div class="avatar-camera">📷</div>
+      </div>
+      <div class="profile-name" id="profileName">Студент</div>
+      <div class="profile-date" id="dateText"></div>
+    </div>
+
+    <!-- Period selector -->
+    <div class="period-bar">
+      <div class="period-selector" id="periodSelector">
+        <div class="period-info">
+          <div class="period-label">Период</div>
+          <div class="period-name" id="periodDisplayName">—</div>
+        </div>
+        <span class="period-badge" id="periodBadge">Активен</span>
+      </div>
+      <button class="icon-btn" id="newPeriodBtn" title="Новый период">➕</button>
+    </div>
+
+    <!-- Closed period banner -->
+    <div class="closed-banner hidden" id="closedBanner">
+      🔒 Период завершён — отметки только для просмотра
+    </div>
+
+    <!-- Stats carousel -->
+    <div class="carousel-wrap" id="carouselWrap">
+      <div class="carousel-card">
+        <button type="button" class="carousel-btn prev hidden" id="carouselPrev" aria-label="Назад">‹</button>
+        <button type="button" class="carousel-btn next hidden" id="carouselNext" aria-label="Вперёд">›</button>
+        <div class="carousel-track" id="carouselTrack"></div>
+      </div>
+      <div class="carousel-dots hidden" id="carouselDots"></div>
+    </div>
+
+    <!-- Today reminder -->
+    <div class="today-block hidden" id="todayBlock">
+      <div class="today-header">
+        <h3 id="todayTitle">📅 Сегодня</h3>
+        <span class="today-counter" id="todayCounter"></span>
+      </div>
+      <div id="todayList"></div>
+    </div>
+
+    <!-- Subjects -->
+    <h2 class="section-title">Предметы</h2>
+    <div class="subjects-grid" id="subjectsGrid"></div>
+    <div class="empty-state hidden" id="emptyState">
+      <div class="icon">📚</div>
+      <h2>Добавь первый предмет</h2>
+      <p>Нажми «+» внизу, чтобы начать отслеживать посещаемость</p>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" id="fab" title="Добавить">+</button>
+
+  <!-- ===== Modals ===== -->
+
+  <!-- Profile Modal -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h2 class="modal-title">Профиль</h2>
+
+      <div class="avatar-preview-block">
+        <div class="avatar-preview" id="avatarPreview">С</div>
+
+        <div class="avatar-type-tabs">
+          <button type="button" class="avatar-type-btn active" data-avatar-type="photo">Фото</button>
+          <button type="button" class="avatar-type-btn" data-avatar-type="emoji">Эмодзи</button>
+          <button type="button" class="avatar-type-btn" data-avatar-type="initials">Инициалы</button>
+        </div>
+
+        <div class="avatar-panel" id="panelPhoto">
+          <div class="photo-actions">
+            <button type="button" class="btn btn-primary" id="photoUploadBtn" style="flex:1;">📷 Загрузить</button>
+            <button type="button" class="btn btn-danger hidden" id="photoRemoveBtn" style="flex:0.7;">Удалить</button>
+          </div>
+          <input type="file" id="photoInput" accept="image/*" class="hidden">
+        </div>
+
+        <div class="avatar-panel hidden" id="panelEmoji">
+          <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+
+        <div class="avatar-panel hidden" id="panelInitials">
+          <p style="text-align:center;color:var(--text-secondary);font-size:0.9rem;">
+            Аватар будет показывать инициалы имени
+          </p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Имя</label>
+        <input type="text" id="profileNameInput" placeholder="Как тебя зовут?" maxlength="40">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="profileCancel">Отмена</button>
+        <button class="btn btn-primary" id="profileSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Periods List Modal -->
+  <div class="modal-overlay" id="periodsModal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h2 class="modal-title">Все периоды</h2>
+      <div class="period-list" id="periodList"></div>
+      <button class="btn btn-primary" id="periodsNewBtn" style="width:100%;margin-bottom:10px;">+ Новый период</button>
+      <button class="btn btn-secondary" id="periodsClose" style="width:100%;">Закрыть</button>
+    </div>
+  </div>
+
+  <!-- New / Edit Period Modal -->
+  <div class="modal-overlay" id="periodEditModal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h2 class="modal-title" id="periodEditTitle">Новый период</h2>
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="periodNameInput" placeholder="Например, Семестр 1" maxlength="40">
+      </div>
+      <div class="form-group">
+        <label>Учебный год</label>
+        <input type="text" id="periodYearInput" placeholder="2025/26" maxlength="12">
+      </div>
+      <label class="checkbox-row" id="copySubjectsRow">
+        <input type="checkbox" id="copySubjectsCheck">
+        <span>Скопировать предметы из текущего периода</span>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="periodEditCancel">Отмена</button>
+        <button class="btn btn-primary" id="periodEditSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit Subject Modal -->
+  <div class="modal-overlay" id="subjectModal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h2 class="modal-title" id="subjectModalTitle">Новый предмет</h2>
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="subjectName" placeholder="Например, Математика" maxlength="60">
+      </div>
+      <div class="form-group">
+        <label>Лимит пропусков</label>
+        <input type="number" id="subjectLimit" value="4" min="0" max="50">
+      </div>
+      <div class="form-group">
+        <label>Расписание (необязательно)</label>
+        <div class="schedule-editor" id="scheduleEditor"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="subjectCancel">Отмена</button>
+        <button class="btn btn-primary" id="subjectSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mark Attendance Modal -->
+  <div class="modal-overlay" id="markModal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h2 class="modal-title" id="markModalTitle">Отметить занятие</h2>
+      <div class="form-group">
+        <label>Дата</label>
+        <input type="date" id="markDate">
+      </div>
+      <div class="form-group">
+        <label>Тип занятия</label>
+        <div class="mark-type-btns">
+          <button type="button" class="mark-type-btn active" data-mark-type="">Любой</button>
+          <button type="button" class="mark-type-btn" data-mark-type="lecture">Лекция</button>
+          <button type="button" class="mark-type-btn" data-mark-type="practice">Практика</button>
+        </div>
+      </div>
+      <div class="status-btns four">
+        <button class="status-btn" data-status="present">
+          <span class="emoji">✅</span>
+          Был
+        </button>
+        <button class="status-btn" data-status="absent">
+          <span class="emoji">❌</span>
+          НБ
+        </button>
+        <button class="status-btn" data-status="excused">
+          <span class="emoji">📋</span>
+          НБ уваж.
+        </button>
+        <button class="status-btn" data-status="cancelled">
+          <span class="emoji">🚫</span>
+          Отменено
+        </button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="markCancel">Отмена</button>
+        <button class="btn btn-primary" id="markSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subject Detail Modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="detail-header">
+        <h2 class="modal-title" id="detailTitle" style="margin:0;text-align:left;"></h2>
+        <div style="display:flex;gap:6px;">
+          <button class="icon-btn" id="detailEdit" title="Изменить">✏️</button>
+          <button class="icon-btn" id="detailDelete" title="Удалить">🗑️</button>
+        </div>
+      </div>
+      <div class="detail-stats">
+        <div class="detail-stat">
+          <div class="val" id="detailPercent">0%</div>
+          <div class="lbl">посещаемость</div>
+        </div>
+        <div class="detail-stat">
+          <div class="val" id="detailLessons">0</div>
+          <div class="lbl">занятий</div>
+        </div>
+        <div class="detail-stat">
+          <div class="val text-red" id="detailAbsences">0</div>
+          <div class="lbl">НБ</div>
+        </div>
+        <div class="detail-stat">
+          <div class="val" id="detailRemaining">0</div>
+          <div class="lbl">осталось до лимита</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="detailMark" style="width:100%;margin-bottom:20px;">
+        + Отметить занятие
+      </button>
+      <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:10px;color:var(--text-secondary);">История</h3>
+      <div class="history-list" id="historyList"></div>
+      <button class="btn btn-secondary" id="detailClose" style="width:100%;">Закрыть</button>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal" style="max-width:360px;">
+      <div class="modal-handle"></div>
+      <h2 class="modal-title" id="confirmTitle">Удалить?</h2>
+      <p style="text-align:center;color:var(--text-secondary);margin-bottom:20px;" id="confirmText">
+        Действие нельзя отменить.
+      </p>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="confirmCancel">Отмена</button>
+        <button class="btn btn-danger" id="confirmOk">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    //  ТРЕКЕР ПОСЕЩАЕМОСТИ — профиль + периоды
+    //  Данные: localStorage 'attendance_tracker'
+    // ============================================================
+
+    // ---------- State ----------
+    // {
+    //   profileName: string,
+    //   avatar: { type: 'initials'|'emoji'|'photo', value: string },
+    //   theme: 'dark'|'light',
+    //   currentPeriodId: string,
+    //   periods: [{ id, name, year, status: 'active'|'closed', subjects: [...] }]
+    // }
+    let state = {
+      profileName: '',
+      avatar: { type: 'initials', value: '' },
+      theme: 'dark',
+      currentPeriodId: null,
+      periods: []
+    };
+
+    // Черновик аватара в модалке (применяется только по «Сохранить»)
+    let draftAvatar = { type: 'initials', value: '' };
+    let draftName = '';
+
+    const EMOJI_LIST = ['😎', '🦁', '🐺', '🦅', '🚀', '🎮', '🎧', '⚡', '🔥', '🌙', '🏔️', '🐴', '🐱', '🐸', '🦊', '🐻'];
+
+    let editingSubjectId = null;
+    let currentDetailId = null;
+    let selectedStatus = null;
+    let selectedMarkType = null; // null | 'lecture' | 'practice'
+    let editingRecordId = null;
+    let editingPeriodId = null;   // null = create period
+    let confirmCallback = null;
+
+    // ---------- Helpers ----------
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+
+    function todayStr() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function formatDate(iso) {
+      const [y, m, d] = iso.split('-');
+      return `${d}.${m}.${y}`;
+    }
+
+    function currentAcademicYear() {
+      const d = new Date();
+      const y = d.getFullYear();
+      // Учебный год: сентябрь–август
+      if (d.getMonth() >= 8) return `${y}/${String(y + 1).slice(2)}`;
+      return `${y - 1}/${String(y).slice(2)}`;
+    }
+
+    function getInitials(name) {
+      if (!name || !name.trim()) return 'С';
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function getCurrentPeriod() {
+      return state.periods.find(p => p.id === state.currentPeriodId) || state.periods[0] || null;
+    }
+
+    function getSubjects() {
+      const p = getCurrentPeriod();
+      return p ? p.subjects : [];
+    }
+
+    function isPeriodClosed() {
+      const p = getCurrentPeriod();
+      return p ? p.status === 'closed' : false;
+    }
+
+    const DAY_LABELS = { 1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб' };
+    const DAY_FULL = { 0: 'воскресенье', 1: 'понедельник', 2: 'вторник', 3: 'среда', 4: 'четверг', 5: 'пятница', 6: 'суббота' };
+    const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+    function todayWeekday() {
+      return new Date().getDay(); // 0=Вс, 1=Пн ... 6=Сб
+    }
+
+    // Миграция старого schedule.days → slots
+    function normalizeSchedule(schedule) {
+      if (!schedule) return { slots: [] };
+      if (Array.isArray(schedule.slots)) {
+        return {
+          slots: schedule.slots
+            .filter(s => s && s.day >= 1 && s.day <= 6 && (s.type === 'lecture' || s.type === 'practice'))
+            .map(s => ({
+              day: s.day,
+              type: s.type,
+              count: Math.min(4, Math.max(1, parseInt(s.count, 10) || 1))
+            }))
+        };
+      }
+      if (Array.isArray(schedule.days)) {
+        return {
+          slots: schedule.days
+            .filter(d => d >= 1 && d <= 6)
+            .map(d => ({ day: d, type: 'lecture', count: 1 }))
+        };
+      }
+      return { slots: [] };
+    }
+
+    function getScheduleSlots(subj) {
+      return normalizeSchedule(subj.schedule).slots;
+    }
+
+    function formatScheduleMini(subj) {
+      const slots = getScheduleSlots(subj);
+      if (!slots.length) return '';
+      // group by day
+      const byDay = {};
+      slots.forEach(s => {
+        if (!byDay[s.day]) byDay[s.day] = [];
+        const label = s.type === 'lecture' ? 'Лек' : 'Практ';
+        byDay[s.day].push(s.count > 1 ? `${label}×${s.count}` : label);
+      });
+      return Object.keys(byDay).sort((a, b) => a - b)
+        .map(d => `${DAY_LABELS[d]} ${byDay[d].join('/')}`)
+        .join(' · ');
+    }
+
+    function calcSubjectStats(subj) {
+      // Только явные отметки в records. Нет авто-НБ.
+      // Процент = был / (был + НБ). Уважительные и «Отменено» не входят.
+      const total = subj.records.length;
+      const present = subj.records.filter(r => r.status === 'present').length;
+      const absent = subj.records.filter(r => r.status === 'absent').length;
+      const excused = subj.records.filter(r => r.status === 'excused').length;
+      const cancelled = subj.records.filter(r => r.status === 'cancelled').length;
+      const counted = present + absent;
+      const percent = counted === 0 ? null : Math.round((present / counted) * 100);
+      const remaining = Math.max(0, subj.limit - absent);
+      return { total, present, absent, excused, cancelled, percent, remaining };
+    }
+
+    function calcPeriodStats(period) {
+      let totalPresent = 0, totalAbsent = 0, totalCounted = 0, totalLessons = 0;
+      period.subjects.forEach(s => {
+        const st = calcSubjectStats(s);
+        totalLessons += st.total;
+        totalPresent += st.present;
+        totalAbsent += st.absent;
+        totalCounted += st.present + st.absent;
+      });
+      const percent = totalCounted === 0 ? null : Math.round((totalPresent / totalCounted) * 100);
+      return { totalLessons, totalPresent, totalAbsent, percent };
+    }
+
+    function progressColor(ratio) {
+      if (ratio >= 0.9) return '#ef4444';
+      if (ratio >= 0.6) return '#eab308';
+      return '#22c55e';
+    }
+
+    // ---------- Persistence & Migration ----------
+    // Безопасный доступ к localStorage (в sandbox / file:// с ограничениями может быть недоступен)
+    const memoryStore = {};
+    let storageAvailable = null;
+
+    function canUseStorage() {
+      if (storageAvailable !== null) return storageAvailable;
+      try {
+        const k = '__att_test__';
+        window.localStorage.setItem(k, '1');
+        window.localStorage.removeItem(k);
+        storageAvailable = true;
+      } catch (e) {
+        storageAvailable = false;
+      }
+      return storageAvailable;
+    }
+
+    function storageGet(key) {
+      if (canUseStorage()) {
+        try { return window.localStorage.getItem(key); } catch (e) { return memoryStore[key] || null; }
+      }
+      return memoryStore[key] || null;
+    }
+
+    function storageSet(key, value) {
+      if (canUseStorage()) {
+        try { window.localStorage.setItem(key, value); return; } catch (e) { /* fall through */ }
+      }
+      memoryStore[key] = value;
+    }
+
+    function loadState() {
+      try {
+        const raw = storageGet('attendance_tracker');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+
+          // Миграция со старого формата (subjects на верхнем уровне)
+          if (Array.isArray(parsed.subjects) && !parsed.periods) {
+            const periodId = uid();
+            state = {
+              profileName: parsed.profileName || '',
+              avatar: normalizeAvatar(parsed.avatar),
+              theme: parsed.theme || 'dark',
+              currentPeriodId: periodId,
+              periods: [{
+                id: periodId,
+                name: 'Семестр 1',
+                year: currentAcademicYear(),
+                status: 'active',
+                subjects: parsed.subjects
+              }]
+            };
+            saveState();
+          } else {
+            state.profileName = parsed.profileName || '';
+            state.avatar = normalizeAvatar(parsed.avatar);
+            state.theme = parsed.theme || 'dark';
+            state.periods = Array.isArray(parsed.periods) ? parsed.periods : [];
+            state.currentPeriodId = parsed.currentPeriodId || (state.periods[0] && state.periods[0].id) || null;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load state', e);
+      }
+
+      // Если периодов нет — создаём первый
+      if (state.periods.length === 0) {
+        const periodId = uid();
+        state.periods.push({
+          id: periodId,
+          name: 'Семестр 1',
+          year: currentAcademicYear(),
+          status: 'active',
+          subjects: []
+        });
+        state.currentPeriodId = periodId;
+        saveState();
+      }
+
+      // Если currentPeriodId битый — берём первый
+      if (!state.periods.find(p => p.id === state.currentPeriodId)) {
+        state.currentPeriodId = state.periods[0].id;
+        saveState();
+      }
+
+      // Миграция schedule.days → schedule.slots у всех предметов
+      let migrated = false;
+      state.periods.forEach(p => {
+        (p.subjects || []).forEach(s => {
+          if (s.schedule && Array.isArray(s.schedule.days) && !Array.isArray(s.schedule.slots)) {
+            s.schedule = normalizeSchedule(s.schedule);
+            migrated = true;
+          } else if (s.schedule) {
+            s.schedule = normalizeSchedule(s.schedule);
+          } else {
+            s.schedule = { slots: [] };
+          }
+        });
+      });
+      if (migrated) saveState();
+
+      applyTheme();
+    }
+
+    function normalizeAvatar(av) {
+      if (av && (av.type === 'initials' || av.type === 'emoji' || av.type === 'photo')) {
+        return { type: av.type, value: typeof av.value === 'string' ? av.value : '' };
+      }
+      return { type: 'initials', value: '' };
+    }
+
+    function saveState() {
+      const payload = JSON.stringify({
+        profileName: state.profileName,
+        avatar: state.avatar,
+        theme: state.theme,
+        currentPeriodId: state.currentPeriodId,
+        periods: state.periods
+      });
+
+      if (canUseStorage()) {
+        try {
+          window.localStorage.setItem('attendance_tracker', payload);
+          return true;
+        } catch (e) {
+          // QuotaExceeded или SecurityError
+          if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+            return false;
+          }
+          // Другие ошибки — fallback в память
+          memoryStore['attendance_tracker'] = payload;
+          return true;
+        }
+      }
+      memoryStore['attendance_tracker'] = payload;
+      return true;
+    }
+
+    // ---------- Theme ----------
+    function applyTheme() {
+      document.documentElement.setAttribute('data-theme', state.theme);
+      document.getElementById('themeBtn').textContent = state.theme === 'dark' ? '☀️' : '🌙';
+    }
+
+    function toggleTheme() {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      applyTheme();
+      saveState();
+      render();
+    }
+
+    // ---------- Carousel ----------
+    let carouselIndex = 0;
+    let carouselSubjectIds = []; // [null, id1, id2, ...] — null = overall slide
+    let carouselTouchX = null;
+
+    function ringColorFor(percent, trackCol) {
+      if (percent === null) return trackCol;
+      if (percent >= 80) return '#22c55e';
+      if (percent >= 60) return '#eab308';
+      return '#ef4444';
+    }
+
+    function renderCarousel(subjects) {
+      const track = document.getElementById('carouselTrack');
+      const dotsEl = document.getElementById('carouselDots');
+      const prevBtn = document.getElementById('carouselPrev');
+      const nextBtn = document.getElementById('carouselNext');
+      const trackCol = state.theme === 'dark' ? 'rgba(148,163,184,0.2)' : 'rgba(148,163,184,0.3)';
+
+      // Overall stats
+      let totalLessons = 0, totalPresent = 0, totalAbsent = 0, totalCounted = 0;
+      let worst = { name: '—', absent: -1 };
+      subjects.forEach(s => {
+        const st = calcSubjectStats(s);
+        totalLessons += st.total;
+        totalPresent += st.present;
+        totalAbsent += st.absent;
+        totalCounted += st.present + st.absent;
+        if (st.absent > worst.absent) worst = { name: s.name, absent: st.absent };
+      });
+      const overallPct = totalCounted === 0 ? null : Math.round((totalPresent / totalCounted) * 100);
+      const worstName = worst.absent > 0
+        ? (worst.name.length > 10 ? worst.name.slice(0, 9) + '…' : worst.name)
+        : '—';
+
+      // Preserve index by subject id
+      const prevId = carouselSubjectIds[carouselIndex] !== undefined
+        ? carouselSubjectIds[carouselIndex]
+        : null;
+      carouselSubjectIds = [null, ...subjects.map(s => s.id)];
+      let newIndex = carouselSubjectIds.indexOf(prevId);
+      if (newIndex < 0) newIndex = 0;
+      carouselIndex = Math.min(newIndex, carouselSubjectIds.length - 1);
+
+      // Build slides HTML
+      let slidesHtml = `
+        <div class="carousel-slide" data-slide="0">
+          <div class="slide-title">Общая посещаемость</div>
+          <div class="chart-wrapper">
+            <canvas width="150" height="150" data-carousel-ring="0"></canvas>
+            <div class="chart-center">
+              <span class="percent">${overallPct === null ? '—' : overallPct + '%'}</span>
+              <span class="label">посещ.</span>
+            </div>
+          </div>
+          <div class="stats-meta">
+            <div class="item">
+              <div class="value">${totalLessons}</div>
+              <div class="desc">занятий</div>
+            </div>
+            <div class="item">
+              <div class="value text-red">${totalAbsent}</div>
+              <div class="desc">пропусков</div>
+            </div>
+            <div class="item">
+              <div class="value">${escapeHtml(worstName)}</div>
+              <div class="desc">больше НБ</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      subjects.forEach((s, i) => {
+        const st = calcSubjectStats(s);
+        const pctStr = st.percent === null ? '—' : st.percent + '%';
+        slidesHtml += `
+          <div class="carousel-slide" data-slide="${i + 1}" data-subject-id="${s.id}">
+            <div class="slide-title clickable" data-open-subject="${s.id}">${escapeHtml(s.name)}</div>
+            <div class="chart-wrapper">
+              <canvas width="150" height="150" data-carousel-ring="${i + 1}"></canvas>
+              <div class="chart-center">
+                <span class="percent">${pctStr}</span>
+                <span class="label">посещ.</span>
+              </div>
+            </div>
+            <div class="stats-meta">
+              <div class="item">
+                <div class="value text-green">${st.present}</div>
+                <div class="desc">Был</div>
+              </div>
+              <div class="item">
+                <div class="value text-red">${st.absent}</div>
+                <div class="desc">НБ</div>
+              </div>
+              <div class="item">
+                <div class="value">${st.remaining} из ${s.limit}</div>
+                <div class="desc">до лимита</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      track.innerHTML = slidesHtml;
+
+      // Dots
+      const slideCount = carouselSubjectIds.length;
+      if (slideCount <= 1) {
+        dotsEl.classList.add('hidden');
+        prevBtn.classList.add('hidden');
+        nextBtn.classList.add('hidden');
+      } else {
+        dotsEl.classList.remove('hidden');
+        prevBtn.classList.remove('hidden');
+        nextBtn.classList.remove('hidden');
+        dotsEl.innerHTML = carouselSubjectIds.map((_, i) =>
+          `<button type="button" class="carousel-dot${i === carouselIndex ? ' active' : ''}" data-dot="${i}" aria-label="Слайд ${i + 1}"></button>`
+        ).join('');
+      }
+
+      goToCarouselSlide(carouselIndex, false);
+
+      // Draw rings after layout
+      requestAnimationFrame(() => {
+        // overall
+        const c0 = track.querySelector('canvas[data-carousel-ring="0"]');
+        if (c0) drawRing(c0, overallPct, ringColorFor(overallPct, trackCol), trackCol);
+
+        subjects.forEach((s, i) => {
+          const st = calcSubjectStats(s);
+          const canvas = track.querySelector(`canvas[data-carousel-ring="${i + 1}"]`);
+          if (canvas) drawRing(canvas, st.percent, ringColorFor(st.percent, trackCol), trackCol);
+        });
+      });
+    }
+
+    function goToCarouselSlide(index, animate) {
+      const track = document.getElementById('carouselTrack');
+      const slideCount = carouselSubjectIds.length;
+      if (slideCount === 0) return;
+
+      // loop
+      if (index < 0) index = slideCount - 1;
+      if (index >= slideCount) index = 0;
+      carouselIndex = index;
+
+      if (!animate) {
+        track.style.transition = 'none';
+      } else {
+        track.style.transition = 'transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)';
+      }
+      track.style.transform = `translateX(-${carouselIndex * 100}%)`;
+
+      track.querySelectorAll('.carousel-slide').forEach((slide, i) => {
+        slide.classList.toggle('active', i === carouselIndex);
+      });
+
+      document.querySelectorAll('#carouselDots .carousel-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === carouselIndex);
+      });
+
+      if (!animate) {
+        // force reflow then restore transition
+        void track.offsetWidth;
+        track.style.transition = 'transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)';
+      }
+
+      // re-draw active ring for fill animation feel
+      requestAnimationFrame(() => {
+        const canvas = track.querySelector(`canvas[data-carousel-ring="${carouselIndex}"]`);
+        if (!canvas) return;
+        const trackCol = state.theme === 'dark' ? 'rgba(148,163,184,0.2)' : 'rgba(148,163,184,0.3)';
+        if (carouselIndex === 0) {
+          // overall — recompute quickly
+          const subjects = getSubjects();
+          let tp = 0, ta = 0;
+          subjects.forEach(s => {
+            const st = calcSubjectStats(s);
+            tp += st.present;
+            ta += st.absent;
+          });
+          const counted = tp + ta;
+          const pct = counted === 0 ? null : Math.round((tp / counted) * 100);
+          drawRing(canvas, pct, ringColorFor(pct, trackCol), trackCol);
+        } else {
+          const sid = carouselSubjectIds[carouselIndex];
+          const s = getSubjects().find(x => x.id === sid);
+          if (!s) return;
+          const st = calcSubjectStats(s);
+          drawRing(canvas, st.percent, ringColorFor(st.percent, trackCol), trackCol);
+        }
+      });
+    }
+
+    // ---------- Canvas Charts ----------
+    function drawRing(canvas, percent, color, trackColor) {
+      const dpr = window.devicePixelRatio || 1;
+      const cssSize = canvas.clientWidth || parseInt(canvas.getAttribute('width'), 10) || 160;
+
+      if (canvas.width !== Math.round(cssSize * dpr)) {
+        canvas.width = Math.round(cssSize * dpr);
+        canvas.height = Math.round(cssSize * dpr);
+        canvas.style.width = cssSize + 'px';
+        canvas.style.height = cssSize + 'px';
+      }
+
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const size = cssSize;
+      const cx = size / 2;
+      const cy = size / 2;
+      const lineW = size * 0.1;
+      const radius = (size - lineW) / 2;
+      const p = percent === null ? 0 : percent / 100;
+
+      ctx.clearRect(0, 0, size, size);
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = trackColor;
+      ctx.lineWidth = lineW;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      if (p > 0) {
+        const start = -Math.PI / 2;
+        const end = start + Math.PI * 2 * p;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, start, end);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineW;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+    }
+
+    // ---------- Render ----------
+    // Отрисовка аватара в элемент (шапка или превью)
+    function paintAvatar(el, avatar, name) {
+      const displayName = (name || '').trim() || 'Студент';
+      el.classList.remove('has-photo', 'emoji-avatar');
+      el.style.backgroundImage = '';
+      el.style.background = 'linear-gradient(135deg, var(--accent-start), var(--accent-end))';
+
+      if (avatar.type === 'photo' && avatar.value) {
+        el.classList.add('has-photo');
+        el.style.backgroundImage = `url(${avatar.value})`;
+        el.style.backgroundSize = 'cover';
+        el.style.backgroundPosition = 'center';
+        el.textContent = '';
+      } else if (avatar.type === 'emoji' && avatar.value) {
+        el.classList.add('emoji-avatar');
+        el.textContent = avatar.value;
+      } else {
+        el.textContent = getInitials(displayName);
+      }
+    }
+
+    function render() {
+      // Profile
+      const displayName = state.profileName.trim() || 'Студент';
+      document.getElementById('profileName').textContent = displayName;
+      paintAvatar(document.getElementById('headerAvatar'), state.avatar, displayName);
+
+      const now = new Date();
+      const days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+      const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+      document.getElementById('dateText').textContent =
+        `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+      // Period bar
+      const period = getCurrentPeriod();
+      if (period) {
+        document.getElementById('periodDisplayName').textContent =
+          `${period.name} · ${period.year}`;
+        const badge = document.getElementById('periodBadge');
+        if (period.status === 'closed') {
+          badge.textContent = 'Завершён';
+          badge.classList.add('closed');
+        } else {
+          badge.textContent = 'Активен';
+          badge.classList.remove('closed');
+        }
+      }
+
+      // Closed banner & FAB
+      const closed = isPeriodClosed();
+      document.getElementById('closedBanner').classList.toggle('hidden', !closed);
+      document.getElementById('fab').disabled = closed;
+
+      // Stats carousel + subjects
+      const subjects = getSubjects();
+      renderCarousel(subjects);
+
+      // Today reminder — предметы с расписанием на сегодня без отметки
+      renderTodayBlock(subjects);
+
+      // Subjects grid
+      const grid = document.getElementById('subjectsGrid');
+      const empty = document.getElementById('emptyState');
+
+      if (subjects.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+      } else {
+        empty.classList.add('hidden');
+        grid.innerHTML = subjects.map((s, i) => {
+          const st = calcSubjectStats(s);
+          const ratio = s.limit === 0 ? (st.absent > 0 ? 1 : 0) : st.absent / s.limit;
+          const barColor = progressColor(Math.min(ratio, 1));
+          const barWidth = Math.min(ratio * 100, 100);
+          const isDanger = st.remaining <= 1 && s.limit > 0 || (s.limit === 0 && st.absent > 0);
+          const schedMini = formatScheduleMini(s);
+          const schedHtml = schedMini
+            ? `<div class="schedule-mini">${escapeHtml(schedMini)}</div>`
+            : '';
+
+          return `
+            <div class="subject-card ${isDanger ? 'danger' : ''}"
+                 data-id="${s.id}"
+                 style="animation-delay:${0.12 + i * 0.05}s">
+              <div class="subject-card-header">
+                <div class="subject-name">${escapeHtml(s.name)}</div>
+                <div class="ring-container">
+                  <canvas width="52" height="52" data-ring="${s.id}"></canvas>
+                  <div class="ring-percent">${st.percent === null ? '—' : st.percent + '%'}</div>
+                </div>
+              </div>
+              <div class="subject-stats">
+                <span>НБ: <strong class="text-red">${st.absent}</strong> из ${s.limit}</span>
+                <span>${st.total} зан.</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width:${barWidth}%;background:${barColor}"></div>
+              </div>
+              ${schedHtml}
+            </div>
+          `;
+        }).join('');
+
+        requestAnimationFrame(() => {
+          subjects.forEach(s => {
+            const canvas = document.querySelector(`canvas[data-ring="${s.id}"]`);
+            if (!canvas) return;
+            const st = calcSubjectStats(s);
+            const ringColor = st.percent === null ? trackCol :
+              st.percent >= 80 ? '#22c55e' : st.percent >= 60 ? '#eab308' : '#ef4444';
+            drawRing(canvas, st.percent, ringColor, trackCol);
+          });
+        });
+      }
+    }
+
+    function findTodayRecord(subj, type, pair) {
+      const today = todayStr();
+      return subj.records.find(r =>
+        r.date === today &&
+        (r.type || null) === type &&
+        (r.pair || null) === pair
+      ) || null;
+    }
+
+    function buildTodayLessons(subjects) {
+      const wd = todayWeekday();
+      if (wd === 0) return [];
+      const lessons = [];
+      subjects.forEach(s => {
+        const slots = getScheduleSlots(s).filter(sl => sl.day === wd);
+        slots.forEach(sl => {
+          for (let pair = 1; pair <= sl.count; pair++) {
+            const showPair = sl.count > 1 ? pair : null;
+            lessons.push({
+              subjectId: s.id,
+              name: s.name,
+              type: sl.type,
+              pair: showPair,
+              record: findTodayRecord(s, sl.type, showPair)
+            });
+          }
+        });
+      });
+      return lessons;
+    }
+
+    function renderTodayBlock(subjects) {
+      const block = document.getElementById('todayBlock');
+      const list = document.getElementById('todayList');
+      if (isPeriodClosed()) {
+        block.classList.add('hidden');
+        return;
+      }
+
+      const lessons = buildTodayLessons(subjects);
+      if (lessons.length === 0) {
+        block.classList.add('hidden');
+        return;
+      }
+
+      block.classList.remove('hidden');
+      const now = new Date();
+      const titleDate = `${DAY_FULL[now.getDay()]}, ${now.getDate()} ${MONTHS_GEN[now.getMonth()]}`;
+      document.getElementById('todayTitle').textContent = `📅 Сегодня · ${titleDate}`;
+
+      const marked = lessons.filter(l => l.record).length;
+      document.getElementById('todayCounter').textContent = `отмечено ${marked} из ${lessons.length}`;
+
+      if (marked === lessons.length) {
+        list.innerHTML = `<div class="today-done">Все пары на сегодня отмечены ✓</div>`;
+        // всё равно покажем строки с подсветкой
+        list.innerHTML += lessons.map(l => todayLessonHtml(l)).join('');
+        return;
+      }
+
+      list.innerHTML = lessons.map(l => todayLessonHtml(l)).join('');
+    }
+
+    function todayLessonHtml(l) {
+      const typeLabel = l.type === 'lecture' ? 'Лекция' : 'Практика';
+      const typeClass = l.type === 'lecture' ? 'lecture' : 'practice';
+      const pairHtml = l.pair ? `<span class="today-pair">пара ${l.pair}</span>` : '';
+      const status = l.record ? l.record.status : null;
+      const presentCls = status === 'present' ? 'selected' : (status ? 'dimmed' : '');
+      const absentCls = status === 'absent' ? 'selected' : (status ? 'dimmed' : '');
+      return `
+        <div class="today-item"
+             data-today-id="${l.subjectId}"
+             data-today-type="${l.type}"
+             data-today-pair="${l.pair === null ? '' : l.pair}">
+          <div class="today-item-info">
+            <span class="today-name">${escapeHtml(l.name)}</span>
+            <span class="today-type-badge ${typeClass}">${typeLabel}</span>
+            ${pairHtml}
+          </div>
+          <div class="today-quick">
+            <button type="button" data-q="present" class="${presentCls}">Был</button>
+            <button type="button" data-q="absent" class="${absentCls}">НБ</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function quickMarkToday(subjectId, status, type, pair) {
+      if (isPeriodClosed()) return;
+      const s = getSubjects().find(x => x.id === subjectId);
+      if (!s) return;
+      const today = todayStr();
+      const pairVal = pair === '' || pair === null || pair === undefined ? null : parseInt(pair, 10);
+      const typeVal = type || null;
+
+      // Точное совпадение: дата + тип + пара
+      let existing = s.records.find(r =>
+        r.date === today &&
+        (r.type || null) === typeVal &&
+        (r.pair || null) === pairVal
+      );
+
+      // Или запись на эту дату без типа (type = null), если пара совпадает по смыслу
+      if (!existing) {
+        existing = s.records.find(r =>
+          r.date === today &&
+          (r.type == null) &&
+          (r.pair || null) === pairVal
+        );
+      }
+
+      if (existing) {
+        existing.status = status;
+        existing.type = typeVal;
+        existing.pair = pairVal;
+      } else {
+        s.records.push({
+          id: uid(),
+          date: today,
+          status,
+          type: typeVal,
+          pair: pairVal
+        });
+      }
+      s.records.sort((a, b) => b.date.localeCompare(a.date));
+      saveState();
+      render();
+    }
+
+    // ---------- Modal helpers ----------
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    function showConfirm(title, text, onOk) {
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmText').textContent = text;
+      confirmCallback = onOk;
+      openModal('confirmModal');
+    }
+
+    // ---------- Profile ----------
+    function openProfileModal() {
+      draftName = state.profileName;
+      draftAvatar = { type: state.avatar.type, value: state.avatar.value };
+      document.getElementById('profileNameInput').value = draftName;
+      syncAvatarUI();
+      openModal('profileModal');
+      setTimeout(() => document.getElementById('profileNameInput').focus(), 300);
+    }
+
+    function syncAvatarUI() {
+      const name = document.getElementById('profileNameInput').value;
+      paintAvatar(document.getElementById('avatarPreview'), draftAvatar, name);
+
+      // Tabs
+      document.querySelectorAll('.avatar-type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.avatarType === draftAvatar.type);
+      });
+
+      // Panels
+      document.getElementById('panelPhoto').classList.toggle('hidden', draftAvatar.type !== 'photo');
+      document.getElementById('panelEmoji').classList.toggle('hidden', draftAvatar.type !== 'emoji');
+      document.getElementById('panelInitials').classList.toggle('hidden', draftAvatar.type !== 'initials');
+
+      // Remove photo button
+      const removeBtn = document.getElementById('photoRemoveBtn');
+      if (draftAvatar.type === 'photo' && draftAvatar.value) {
+        removeBtn.classList.remove('hidden');
+      } else {
+        removeBtn.classList.add('hidden');
+      }
+
+      // Emoji selection
+      document.querySelectorAll('.emoji-btn').forEach(btn => {
+        btn.classList.toggle('active', draftAvatar.type === 'emoji' && btn.dataset.emoji === draftAvatar.value);
+      });
+    }
+
+    function setAvatarType(type) {
+      if (type === 'photo') {
+        // Keep existing photo if any, otherwise empty photo mode
+        if (draftAvatar.type !== 'photo') {
+          draftAvatar = { type: 'photo', value: (state.avatar.type === 'photo' ? state.avatar.value : '') };
+        }
+      } else if (type === 'emoji') {
+        draftAvatar = {
+          type: 'emoji',
+          value: (draftAvatar.type === 'emoji' && draftAvatar.value) ? draftAvatar.value : EMOJI_LIST[0]
+        };
+      } else {
+        draftAvatar = { type: 'initials', value: '' };
+      }
+      syncAvatarUI();
+    }
+
+    function processPhotoFile(file) {
+      if (!file || !file.type.startsWith('image/')) {
+        alert('Выбери файл изображения.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => alert('Не удалось прочитать файл.');
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => alert('Не удалось загрузить изображение.');
+        img.onload = () => {
+          try {
+            const size = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            // Cover crop по центру
+            const scale = Math.max(size / img.width, size / img.height);
+            const w = img.width * scale;
+            const h = img.height * scale;
+            const x = (size - w) / 2;
+            const y = (size - h) / 2;
+            ctx.drawImage(img, x, y, w, h);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            draftAvatar = { type: 'photo', value: dataUrl };
+            syncAvatarUI();
+          } catch (err) {
+            alert('Ошибка обработки изображения.');
+          }
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveProfile() {
+      state.profileName = document.getElementById('profileNameInput').value.trim();
+      const prevAvatar = state.avatar;
+      state.avatar = { type: draftAvatar.type, value: draftAvatar.value };
+
+      const ok = saveState();
+      if (!ok) {
+        // Скорее всего переполнение из‑за фото — откатываем аватар
+        state.avatar = prevAvatar;
+        saveState();
+        alert('Не удалось сохранить фото, выбери изображение поменьше');
+        return;
+      }
+
+      closeModal('profileModal');
+      render();
+    }
+
+    function cancelProfile() {
+      draftAvatar = { type: state.avatar.type, value: state.avatar.value };
+      closeModal('profileModal');
+    }
+
+    function buildEmojiGrid() {
+      const grid = document.getElementById('emojiGrid');
+      grid.innerHTML = EMOJI_LIST.map(e =>
+        `<button type="button" class="emoji-btn" data-emoji="${e}">${e}</button>`
+      ).join('');
+    }
+
+    // ---------- Periods ----------
+    function openPeriodsModal() {
+      const list = document.getElementById('periodList');
+      list.innerHTML = state.periods.map(p => {
+        const st = calcPeriodStats(p);
+        const pctStr = st.percent === null ? '—' : st.percent + '%';
+        const isCurrent = p.id === state.currentPeriodId;
+        const statusLabel = p.status === 'closed' ? ' · Завершён' : '';
+        return `
+          <div class="period-item ${isCurrent ? 'active-item' : ''}" data-period-id="${p.id}">
+            <div class="pi-info">
+              <div class="pi-name">${escapeHtml(p.name)} · ${escapeHtml(p.year)}${statusLabel}</div>
+              <div class="pi-meta">${pctStr} посещ. · ${st.totalAbsent} НБ · ${p.subjects.length} предм.</div>
+            </div>
+            <div class="pi-actions">
+              <button data-period-edit="${p.id}" title="Изменить">✏️</button>
+              <button data-period-toggle="${p.id}" title="${p.status === 'closed' ? 'Открыть' : 'Закрыть'}">${p.status === 'closed' ? '🔓' : '🔒'}</button>
+              <button data-period-del="${p.id}" title="Удалить">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      openModal('periodsModal');
+    }
+
+    function selectPeriod(id) {
+      state.currentPeriodId = id;
+      saveState();
+      closeModal('periodsModal');
+      render();
+    }
+
+    function openPeriodEditModal(id = null) {
+      editingPeriodId = id;
+      const title = document.getElementById('periodEditTitle');
+      const nameInput = document.getElementById('periodNameInput');
+      const yearInput = document.getElementById('periodYearInput');
+      const copyRow = document.getElementById('copySubjectsRow');
+      const copyCheck = document.getElementById('copySubjectsCheck');
+
+      if (id) {
+        const p = state.periods.find(x => x.id === id);
+        title.textContent = 'Редактировать период';
+        nameInput.value = p.name;
+        yearInput.value = p.year;
+        copyRow.classList.add('hidden');
+        copyCheck.checked = false;
+      } else {
+        title.textContent = 'Новый период';
+        nameInput.value = '';
+        yearInput.value = currentAcademicYear();
+        copyRow.classList.remove('hidden');
+        copyCheck.checked = false;
+      }
+      openModal('periodEditModal');
+      setTimeout(() => nameInput.focus(), 300);
+    }
+
+    function savePeriod() {
+      const name = document.getElementById('periodNameInput').value.trim();
+      const year = document.getElementById('periodYearInput').value.trim() || currentAcademicYear();
+      if (!name) {
+        document.getElementById('periodNameInput').focus();
+        return;
+      }
+
+      if (editingPeriodId) {
+        const p = state.periods.find(x => x.id === editingPeriodId);
+        p.name = name;
+        p.year = year;
+      } else {
+        let subjects = [];
+        if (document.getElementById('copySubjectsCheck').checked) {
+          const src = getCurrentPeriod();
+          if (src) {
+            subjects = src.subjects.map(s => ({
+              id: uid(),
+              name: s.name,
+              limit: s.limit,
+              schedule: normalizeSchedule(s.schedule),
+              records: []
+            }));
+          }
+        }
+        const newId = uid();
+        state.periods.push({
+          id: newId,
+          name,
+          year,
+          status: 'active',
+          subjects
+        });
+        state.currentPeriodId = newId;
+      }
+
+      saveState();
+      closeModal('periodEditModal');
+      closeModal('periodsModal');
+      render();
+    }
+
+    function togglePeriodStatus(id) {
+      const p = state.periods.find(x => x.id === id);
+      if (!p) return;
+      p.status = p.status === 'closed' ? 'active' : 'closed';
+      saveState();
+      openPeriodsModal();
+      render();
+    }
+
+    function deletePeriod(id) {
+      if (state.periods.length <= 1) {
+        alert('Нельзя удалить единственный период.');
+        return;
+      }
+      const p = state.periods.find(x => x.id === id);
+      showConfirm(
+        'Удалить период?',
+        `«${p.name}» и все предметы с отметками будут удалены безвозвратно.`,
+        () => {
+          state.periods = state.periods.filter(x => x.id !== id);
+          if (state.currentPeriodId === id) {
+            state.currentPeriodId = state.periods[0].id;
+          }
+          saveState();
+          closeModal('confirmModal');
+          openPeriodsModal();
+          render();
+        }
+      );
+    }
+
+    // ---------- Subject CRUD ----------
+    function buildScheduleEditor(slots) {
+      const editor = document.getElementById('scheduleEditor');
+      const slotMap = {};
+      (slots || []).forEach(s => {
+        slotMap[`${s.day}_${s.type}`] = s.count;
+      });
+
+      editor.innerHTML = [1, 2, 3, 4, 5, 6].map(day => {
+        const lecCount = slotMap[`${day}_lecture`] || 1;
+        const pracCount = slotMap[`${day}_practice`] || 1;
+        const lecOn = !!slotMap[`${day}_lecture`];
+        const pracOn = !!slotMap[`${day}_practice`];
+        return `
+          <div class="sched-day" data-day="${day}">
+            <div class="sched-day-name">${DAY_LABELS[day]}</div>
+            <div class="sched-row">
+              <label class="sched-toggle">
+                <input type="checkbox" data-type="lecture" ${lecOn ? 'checked' : ''}>
+                Лекция
+              </label>
+              <div class="sched-count ${lecOn ? 'active' : ''}" data-count-for="lecture">
+                <button type="button" data-dir="-1">−</button>
+                <span class="count-val">${lecCount}</span>
+                <button type="button" data-dir="1">+</button>
+              </div>
+            </div>
+            <div class="sched-row">
+              <label class="sched-toggle">
+                <input type="checkbox" data-type="practice" ${pracOn ? 'checked' : ''}>
+                Практика
+              </label>
+              <div class="sched-count ${pracOn ? 'active' : ''}" data-count-for="practice">
+                <button type="button" data-dir="-1">−</button>
+                <span class="count-val">${pracCount}</span>
+                <button type="button" data-dir="1">+</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function collectScheduleFromEditor() {
+      const slots = [];
+      document.querySelectorAll('#scheduleEditor .sched-day').forEach(dayEl => {
+        const day = parseInt(dayEl.dataset.day, 10);
+        dayEl.querySelectorAll('.sched-row').forEach(row => {
+          const cb = row.querySelector('input[type="checkbox"]');
+          if (!cb || !cb.checked) return;
+          const type = cb.dataset.type;
+          const val = parseInt(row.querySelector('.count-val').textContent, 10) || 1;
+          slots.push({ day, type, count: Math.min(4, Math.max(1, val)) });
+        });
+      });
+      return { slots };
+    }
+
+    function openSubjectModal(id = null) {
+      if (isPeriodClosed() && !id) return;
+      editingSubjectId = id;
+      const title = document.getElementById('subjectModalTitle');
+      const nameInput = document.getElementById('subjectName');
+      const limitInput = document.getElementById('subjectLimit');
+
+      if (id) {
+        const s = getSubjects().find(x => x.id === id);
+        title.textContent = 'Редактировать';
+        nameInput.value = s.name;
+        limitInput.value = s.limit;
+        buildScheduleEditor(getScheduleSlots(s));
+      } else {
+        title.textContent = 'Новый предмет';
+        nameInput.value = '';
+        limitInput.value = 4;
+        buildScheduleEditor([]);
+      }
+      openModal('subjectModal');
+      setTimeout(() => nameInput.focus(), 300);
+    }
+
+    function saveSubject() {
+      const name = document.getElementById('subjectName').value.trim();
+      const rawLimit = document.getElementById('subjectLimit').value;
+      const parsedLimit = parseInt(rawLimit, 10);
+      const limit = (rawLimit === '' || isNaN(parsedLimit)) ? 4 : Math.max(0, parsedLimit);
+      const schedule = collectScheduleFromEditor();
+
+      if (!name) {
+        document.getElementById('subjectName').focus();
+        return;
+      }
+
+      const period = getCurrentPeriod();
+      if (!period) return;
+
+      if (editingSubjectId) {
+        const s = period.subjects.find(x => x.id === editingSubjectId);
+        s.name = name;
+        s.limit = limit;
+        s.schedule = schedule;
+      } else {
+        period.subjects.push({
+          id: uid(),
+          name,
+          limit,
+          schedule,
+          records: []
+        });
+      }
+      saveState();
+      closeModal('subjectModal');
+      render();
+    }
+
+    function deleteSubject(id) {
+      const period = getCurrentPeriod();
+      if (!period) return;
+      const s = period.subjects.find(x => x.id === id);
+      showConfirm(
+        'Удалить предмет?',
+        `«${s.name}» и все отметки будут удалены безвозвратно.`,
+        () => {
+          period.subjects = period.subjects.filter(x => x.id !== id);
+          saveState();
+          closeModal('confirmModal');
+          closeModal('detailModal');
+          render();
+        }
+      );
+    }
+
+    // ---------- Mark attendance ----------
+    function setMarkTypeUI(type) {
+      selectedMarkType = type || null;
+      document.querySelectorAll('.mark-type-btn').forEach(b => {
+        const raw = b.getAttribute('data-mark-type');
+        const t = (!raw) ? null : raw;
+        b.classList.toggle('active', t === selectedMarkType);
+      });
+    }
+
+    function openMarkModal(subjectId, recordId = null) {
+      if (isPeriodClosed() && !recordId) return;
+      if (isPeriodClosed()) return;
+
+      currentDetailId = subjectId;
+      editingRecordId = recordId;
+      selectedStatus = null;
+      selectedMarkType = null;
+
+      document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+      setMarkTypeUI(null);
+
+      const dateInput = document.getElementById('markDate');
+      if (recordId) {
+        const s = getSubjects().find(x => x.id === subjectId);
+        const rec = s.records.find(r => r.id === recordId);
+        dateInput.value = rec.date;
+        selectedStatus = rec.status;
+        document.querySelector(`.status-btn[data-status="${rec.status}"]`).classList.add('active');
+        setMarkTypeUI(rec.type || null);
+        document.getElementById('markModalTitle').textContent = 'Изменить отметку';
+      } else {
+        dateInput.value = todayStr();
+        document.getElementById('markModalTitle').textContent = 'Отметить занятие';
+      }
+      openModal('markModal');
+    }
+
+    function saveMark() {
+      if (isPeriodClosed()) return;
+      if (!selectedStatus) {
+        document.querySelectorAll('.status-btn').forEach(b => {
+          b.style.borderColor = 'rgba(239,68,68,0.5)';
+          setTimeout(() => b.style.borderColor = '', 600);
+        });
+        return;
+      }
+
+      const date = document.getElementById('markDate').value || todayStr();
+      const s = getSubjects().find(x => x.id === currentDetailId);
+      if (!s) return;
+
+      if (editingRecordId) {
+        const rec = s.records.find(r => r.id === editingRecordId);
+        rec.date = date;
+        rec.status = selectedStatus;
+        rec.type = selectedMarkType;
+        if (rec.pair === undefined) rec.pair = null;
+      } else {
+        const typeVal = selectedMarkType || null;
+        const pairVal = null;
+        const existing = s.records.find(r =>
+          r.date === date &&
+          (r.type || null) === typeVal &&
+          (r.pair || null) === pairVal
+        );
+        if (existing) {
+          if (confirm('Такая отметка уже есть. Изменить статус существующей?')) {
+            existing.status = selectedStatus;
+            existing.type = typeVal;
+            existing.pair = pairVal;
+            s.records.sort((a, b) => b.date.localeCompare(a.date));
+            saveState();
+            closeModal('markModal');
+            render();
+            if (document.getElementById('detailModal').classList.contains('open')) {
+              openDetail(currentDetailId);
+            }
+          }
+          return;
+        }
+        s.records.push({
+          id: uid(),
+          date,
+          status: selectedStatus,
+          type: selectedMarkType,
+          pair: null
+        });
+      }
+
+      s.records.sort((a, b) => b.date.localeCompare(a.date));
+      saveState();
+      closeModal('markModal');
+      render();
+      if (document.getElementById('detailModal').classList.contains('open')) {
+        openDetail(currentDetailId);
+      }
+    }
+
+    // ---------- Detail view ----------
+    function openDetail(id) {
+      currentDetailId = id;
+      const s = getSubjects().find(x => x.id === id);
+      if (!s) return;
+
+      const st = calcSubjectStats(s);
+      const closed = isPeriodClosed();
+
+      document.getElementById('detailTitle').textContent = s.name;
+      document.getElementById('detailPercent').textContent =
+        st.percent === null ? '—' : st.percent + '%';
+      document.getElementById('detailLessons').textContent = st.total;
+      document.getElementById('detailAbsences').textContent = st.absent;
+      document.getElementById('detailRemaining').textContent = st.remaining;
+      document.getElementById('detailRemaining').className =
+        'val ' + (st.remaining <= 1 ? 'text-red' : st.remaining <= 2 ? 'text-yellow' : '');
+
+      const markBtn = document.getElementById('detailMark');
+      markBtn.disabled = closed;
+      markBtn.style.display = closed ? 'none' : 'block';
+
+      // Hide edit/delete for subjects in closed? Allow view of subject meta, but allow edit name/limit still.
+      // User said: can't add/change marks in closed. Subject rename/delete can stay.
+
+      const list = document.getElementById('historyList');
+      if (s.records.length === 0) {
+        list.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px 0;">Пока нет отметок</p>';
+      } else {
+        list.innerHTML = s.records.map(r => {
+          const badgeClass = r.status === 'present' ? 'badge-present' :
+            r.status === 'absent' ? 'badge-absent' :
+            r.status === 'cancelled' ? 'badge-cancelled' : 'badge-excused';
+          const badgeText = r.status === 'present' ? 'Был' :
+            r.status === 'absent' ? 'НБ' :
+            r.status === 'cancelled' ? 'Отменено' : 'НБ уваж.';
+          let typeMeta = '';
+          if (r.type === 'lecture') typeMeta += '<span class="type-badge-sm lecture">Лек.</span>';
+          if (r.type === 'practice') typeMeta += '<span class="type-badge-sm practice">Практ.</span>';
+          if (r.pair) typeMeta += `<span class="today-pair">пара ${r.pair}</span>`;
+          const actions = closed ? '' : `
+            <div class="history-actions">
+              <button data-edit-rec="${r.id}" title="Изменить">✏️</button>
+              <button data-del-rec="${r.id}" title="Удалить">🗑️</button>
+            </div>`;
+          return `
+            <div class="history-item">
+              <div class="history-meta">
+                <span class="date">${formatDate(r.date)}</span>
+                ${typeMeta}
+              </div>
+              <span class="badge ${badgeClass}">${badgeText}</span>
+              ${actions}
+            </div>
+          `;
+        }).join('');
+      }
+
+      openModal('detailModal');
+    }
+
+    function deleteRecord(recId) {
+      if (isPeriodClosed()) return;
+      const s = getSubjects().find(x => x.id === currentDetailId);
+      if (!s) return;
+      s.records = s.records.filter(r => r.id !== recId);
+      saveState();
+      render();
+      openDetail(currentDetailId);
+    }
+
+    // ---------- Export / Import ----------
+    function exportData() {
+      const data = JSON.stringify({
+        profileName: state.profileName,
+        avatar: state.avatar,
+        theme: state.theme,
+        currentPeriodId: state.currentPeriodId,
+        periods: state.periods
+      }, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `attendance_${todayStr()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(file) {
+      if (!confirm('Текущие данные будут заменены. Продолжить?')) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+
+          // Новый формат
+          if (Array.isArray(data.periods)) {
+            state.profileName = data.profileName || '';
+            state.avatar = normalizeAvatar(data.avatar);
+            state.theme = data.theme || state.theme;
+            state.periods = data.periods;
+            state.currentPeriodId = data.currentPeriodId || (data.periods[0] && data.periods[0].id) || null;
+          }
+          // Старый формат (только subjects)
+          else if (Array.isArray(data.subjects)) {
+            const periodId = uid();
+            state.profileName = data.profileName || state.profileName;
+            state.avatar = normalizeAvatar(data.avatar);
+            state.theme = data.theme || state.theme;
+            state.periods = [{
+              id: periodId,
+              name: 'Семестр 1',
+              year: currentAcademicYear(),
+              status: 'active',
+              subjects: data.subjects
+            }];
+            state.currentPeriodId = periodId;
+          } else {
+            throw new Error('Invalid format');
+          }
+
+          if (state.periods.length === 0) {
+            const periodId = uid();
+            state.periods.push({
+              id: periodId,
+              name: 'Семестр 1',
+              year: currentAcademicYear(),
+              status: 'active',
+              subjects: []
+            });
+            state.currentPeriodId = periodId;
+          }
+          if (!state.periods.find(p => p.id === state.currentPeriodId)) {
+            state.currentPeriodId = state.periods[0].id;
+          }
+
+          saveState();
+          applyTheme();
+          render();
+          alert('Данные успешно импортированы!');
+        } catch (err) {
+          alert('Ошибка: файл имеет неверный формат.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ---------- Event listeners ----------
+    document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+
+    // Carousel controls
+    document.getElementById('carouselPrev').addEventListener('click', () => {
+      goToCarouselSlide(carouselIndex - 1, true);
+    });
+    document.getElementById('carouselNext').addEventListener('click', () => {
+      goToCarouselSlide(carouselIndex + 1, true);
+    });
+    document.getElementById('carouselDots').addEventListener('click', (e) => {
+      const dot = e.target.closest('[data-dot]');
+      if (dot) goToCarouselSlide(parseInt(dot.dataset.dot, 10), true);
+    });
+    document.getElementById('carouselTrack').addEventListener('click', (e) => {
+      const title = e.target.closest('[data-open-subject]');
+      if (title) openDetail(title.dataset.openSubject);
+    });
+
+    // Swipe
+    const carouselCard = document.querySelector('.carousel-card');
+    carouselCard.addEventListener('touchstart', (e) => {
+      carouselTouchX = e.changedTouches[0].clientX;
+    }, { passive: true });
+    carouselCard.addEventListener('touchend', (e) => {
+      if (carouselTouchX === null) return;
+      const dx = e.changedTouches[0].clientX - carouselTouchX;
+      carouselTouchX = null;
+      if (Math.abs(dx) < 40) return;
+      if (dx < 0) goToCarouselSlide(carouselIndex + 1, true);
+      else goToCarouselSlide(carouselIndex - 1, true);
+    }, { passive: true });
+
+    // Keyboard arrows (when no input focused and no modal open)
+    document.addEventListener('keydown', (e) => {
+      if (e.target.matches('input, textarea, select')) return;
+      if (document.querySelector('.modal-overlay.open')) return;
+      if (e.key === 'ArrowLeft') goToCarouselSlide(carouselIndex - 1, true);
+      if (e.key === 'ArrowRight') goToCarouselSlide(carouselIndex + 1, true);
+    });
+    document.getElementById('exportBtn').addEventListener('click', exportData);
+    document.getElementById('importBtn').addEventListener('click', () => {
+      document.getElementById('importInput').click();
+    });
+    document.getElementById('importInput').addEventListener('change', (e) => {
+      if (e.target.files[0]) importData(e.target.files[0]);
+      e.target.value = '';
+    });
+
+    document.getElementById('profileBlock').addEventListener('click', openProfileModal);
+    document.getElementById('profileCancel').addEventListener('click', cancelProfile);
+    document.getElementById('profileSave').addEventListener('click', saveProfile);
+    document.getElementById('profileNameInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveProfile();
+    });
+    document.getElementById('profileNameInput').addEventListener('input', () => {
+      // Обновляем превью инициалов при вводе имени
+      if (draftAvatar.type === 'initials') syncAvatarUI();
+    });
+
+    // Avatar type tabs
+    document.querySelectorAll('.avatar-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => setAvatarType(btn.dataset.avatarType));
+    });
+
+    // Photo upload
+    document.getElementById('photoUploadBtn').addEventListener('click', () => {
+      document.getElementById('photoInput').click();
+    });
+    document.getElementById('photoInput').addEventListener('change', (e) => {
+      if (e.target.files[0]) processPhotoFile(e.target.files[0]);
+      e.target.value = '';
+    });
+    document.getElementById('photoRemoveBtn').addEventListener('click', () => {
+      draftAvatar = { type: 'photo', value: '' };
+      syncAvatarUI();
+    });
+
+    // Emoji grid
+    document.getElementById('emojiGrid').addEventListener('click', (e) => {
+      const btn = e.target.closest('.emoji-btn');
+      if (!btn) return;
+      draftAvatar = { type: 'emoji', value: btn.dataset.emoji };
+      syncAvatarUI();
+    });
+
+    document.getElementById('periodSelector').addEventListener('click', openPeriodsModal);
+    document.getElementById('newPeriodBtn').addEventListener('click', () => openPeriodEditModal());
+    document.getElementById('periodsNewBtn').addEventListener('click', () => {
+      closeModal('periodsModal');
+      openPeriodEditModal();
+    });
+    document.getElementById('periodsClose').addEventListener('click', () => closeModal('periodsModal'));
+
+    document.getElementById('periodEditCancel').addEventListener('click', () => closeModal('periodEditModal'));
+    document.getElementById('periodEditSave').addEventListener('click', savePeriod);
+    document.getElementById('periodNameInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') savePeriod();
+    });
+
+    document.getElementById('periodList').addEventListener('click', (e) => {
+      const editBtn = e.target.closest('[data-period-edit]');
+      const toggleBtn = e.target.closest('[data-period-toggle]');
+      const delBtn = e.target.closest('[data-period-del]');
+      const item = e.target.closest('.period-item');
+
+      if (editBtn) {
+        e.stopPropagation();
+        closeModal('periodsModal');
+        openPeriodEditModal(editBtn.dataset.periodEdit);
+      } else if (toggleBtn) {
+        e.stopPropagation();
+        togglePeriodStatus(toggleBtn.dataset.periodToggle);
+      } else if (delBtn) {
+        e.stopPropagation();
+        deletePeriod(delBtn.dataset.periodDel);
+      } else if (item) {
+        selectPeriod(item.dataset.periodId);
+      }
+    });
+
+    document.getElementById('fab').addEventListener('click', () => openSubjectModal());
+
+    document.getElementById('subjectCancel').addEventListener('click', () => closeModal('subjectModal'));
+    document.getElementById('subjectSave').addEventListener('click', saveSubject);
+
+    // Schedule editor: toggles and counters
+    document.getElementById('scheduleEditor').addEventListener('change', (e) => {
+      const cb = e.target.closest('input[type="checkbox"]');
+      if (!cb) return;
+      const row = cb.closest('.sched-row');
+      const countEl = row.querySelector('.sched-count');
+      if (countEl) countEl.classList.toggle('active', cb.checked);
+    });
+
+    document.getElementById('scheduleEditor').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-dir]');
+      if (!btn) return;
+      const countEl = btn.closest('.sched-count');
+      const valEl = countEl.querySelector('.count-val');
+      let v = parseInt(valEl.textContent, 10) || 1;
+      v = Math.min(4, Math.max(1, v + parseInt(btn.dataset.dir, 10)));
+      valEl.textContent = v;
+    });
+
+    // Mark type buttons
+    document.querySelectorAll('.mark-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setMarkTypeUI(btn.dataset.markType || null);
+      });
+    });
+
+    // Today quick mark
+    document.getElementById('todayList').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-q]');
+      if (!btn) return;
+      const item = btn.closest('[data-today-id]');
+      if (!item) return;
+      const pairRaw = item.dataset.todayPair;
+      const pair = pairRaw === '' ? null : parseInt(pairRaw, 10);
+      quickMarkToday(item.dataset.todayId, btn.dataset.q, item.dataset.todayType, pair);
+    });
+    document.getElementById('subjectName').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveSubject();
+    });
+
+    document.getElementById('markCancel').addEventListener('click', () => closeModal('markModal'));
+    document.getElementById('markSave').addEventListener('click', saveMark);
+    document.querySelectorAll('.status-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedStatus = btn.dataset.status;
+      });
+    });
+
+    document.getElementById('detailClose').addEventListener('click', () => closeModal('detailModal'));
+    document.getElementById('detailEdit').addEventListener('click', () => {
+      closeModal('detailModal');
+      openSubjectModal(currentDetailId);
+    });
+    document.getElementById('detailDelete').addEventListener('click', () => {
+      deleteSubject(currentDetailId);
+    });
+    document.getElementById('detailMark').addEventListener('click', () => {
+      openMarkModal(currentDetailId);
+    });
+
+    document.getElementById('confirmCancel').addEventListener('click', () => {
+      confirmCallback = null;
+      closeModal('confirmModal');
+    });
+    document.getElementById('confirmOk').addEventListener('click', () => {
+      if (confirmCallback) confirmCallback();
+      confirmCallback = null;
+    });
+
+    document.getElementById('subjectsGrid').addEventListener('click', (e) => {
+      const card = e.target.closest('.subject-card');
+      if (card) openDetail(card.dataset.id);
+    });
+
+    document.getElementById('historyList').addEventListener('click', (e) => {
+      const editBtn = e.target.closest('[data-edit-rec]');
+      const delBtn = e.target.closest('[data-del-rec]');
+      if (editBtn) {
+        openMarkModal(currentDetailId, editBtn.dataset.editRec);
+      } else if (delBtn) {
+        if (confirm('Удалить эту отметку?')) {
+          deleteRecord(delBtn.dataset.delRec);
+        }
+      }
+    });
+
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.classList.remove('open');
+      });
+    });
+
+    // ---------- Init ----------
+    buildEmojiGrid();
+    loadState();
+    render();
+  </script>
+</body>
+</html>
